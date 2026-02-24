@@ -30,6 +30,9 @@ RUN git clone --depth 1 https://github.com/openmc-dev/openmc.git \
           .. \
  && make -j$(nproc)
 
+# Install Python API from source
+RUN cd openmc && pip install .
+
 
 ############################################
 # Stage 2 — Runtime (Binder)
@@ -39,7 +42,7 @@ FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Install Python dependencies (minimal)
+# Install Python dependencies
 RUN pip install --no-cache --upgrade pip && \
     pip install --no-cache \
         notebook \
@@ -48,10 +51,11 @@ RUN pip install --no-cache --upgrade pip && \
         serpentTools \
         seaborn \
         matplotlib \
-        scikit-learn \
-        openmc
+        scikit-learn
 
+############################################
 # Create user
+############################################
 ARG NB_USER=jovyan
 ARG NB_UID=1000
 ENV USER=${NB_USER}
@@ -69,13 +73,13 @@ RUN if id -u "${NB_USER}" >/dev/null 2>&1; then \
     mkdir -p "${HOME}"
 
 ############################################
-# Copy binaries from builder
+# Copy binaries
 ############################################
-# OpenMC executable
+# OpenMC binary
 COPY --from=builder /openmc/build/bin/openmc /usr/local/bin/openmc
-# ENV OPENMC_CROSS_SECTIONS=""  # user will set or provide data
+ENV OPENMC_CROSS_SECTIONS=""
 
-# NJOY
+# NJOY binary
 COPY --from=builder /NJOY2016/build/njoy /usr/local/bin/njoy
 ENV NJOY=/usr/local/bin/njoy
 
@@ -88,6 +92,6 @@ COPY --chown=${NB_UID}:${NB_UID} . /home/${NB_USER}
 USER ${NB_USER}
 
 ############################################
-# Binder entrypoint
+# Jupyter entrypoint
 ############################################
 CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser"]
