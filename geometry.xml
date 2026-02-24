@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='utf-8'?>
+<geometry>
+    <cell id="1" material="1" name="fuel" region="-10002" universe="10002" />
+    <cell id="2" material="void" name="air gap" region="10002 -10003" universe="10002" />
+    <cell id="3" material="2" name="clad" region="10003 -10004" universe="10002" />
+    <cell id="4" material="3" name="moderator" region="10005 -10006 10007 -10008 10004" universe="10002" />
+    <surface coeffs="0.0 0.0 0.39" id="10002" type="z-cylinder" />
+    <surface coeffs="0.0 0.0 0.4" id="10003" type="z-cylinder" />
+    <surface coeffs="0.0 0.0 0.46" id="10004" type="z-cylinder" />
+    <surface boundary="reflective" coeffs="-0.63" id="10005" type="x-plane" />
+    <surface boundary="reflective" coeffs="0.63" id="10006" type="x-plane" />
+    <surface boundary="reflective" coeffs="-0.63" id="10007" type="y-plane" />
+    <surface boundary="reflective" coeffs="0.63" id="10008" type="y-plane" />
+</geometry>
