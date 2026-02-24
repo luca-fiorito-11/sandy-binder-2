@@ -3,7 +3,6 @@
 ############################################
 FROM python:3.11-slim AS builder
 
-# System dependencies required for compiling NJOY and OpenMC
 RUN apt-get update && apt-get install -y \
     build-essential \
     gfortran \
@@ -21,8 +20,7 @@ RUN git clone --depth 1 https://github.com/njoy/NJOY2016.git \
  && cmake -DCMAKE_BUILD_TYPE=Release .. \
  && make -j$(nproc)
 
-# --- Build OpenMC (minimal: no MPI) ---
-# Official OpenMC instructions use: cmake, then make. [1](https://binderhub.readthedocs.io/en/latest/reference/app.html)
+# --- Build OpenMC ---
 RUN git clone --depth 1 https://github.com/openmc-dev/openmc.git \
  && cd openmc \
  && mkdir build && cd build \
@@ -33,9 +31,8 @@ RUN git clone --depth 1 https://github.com/openmc-dev/openmc.git \
           .. \
  && make -j$(nproc)
 
-# Install Python OpenMC API from source (required for Python 3.11)
+# Install OpenMC Python API in builder stage
 RUN cd openmc && pip install .
-
 
 ############################################
 # Stage 2 — Runtime Binder Image
@@ -45,7 +42,6 @@ FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Install Python dependencies needed at runtime
 RUN pip install --no-cache --upgrade pip && \
     pip install --no-cache \
         notebook \
@@ -57,7 +53,7 @@ RUN pip install --no-cache --upgrade pip && \
         scikit-learn
 
 ############################################
-# Create Binder user safely
+# Create Binder User
 ############################################
 ARG NB_USER=jovyan
 ARG NB_UID=1000
@@ -72,30 +68,28 @@ RUN if id -u "${NB_USER}" >/dev/null 2>&1; then \
         else \
             adduser --disabled-password --gecos "" --uid "${NB_UID}" "${NB_USER}"; \
         fi; \
-    fi && \
-    mkdir -p "${HOME}"
+    fi && mkdir -p "${HOME}"
 
 ############################################
-# Install OpenMC runtime (binary + library + Python API)
+# Copy OpenMC runtime components
 ############################################
 
-# Copy OpenMC Python source tree & install API
-COPY --from=builder /openmc /tmp/openmc_src
-RUN pip install /tmp/openmc_src
-
-# Binary
+# 1. Copy OpenMC binary
 COPY --from=builder /openmc/build/bin/openmc /usr/local/bin/openmc
 
-# Shared libraries (needed for the executable)
+# 2. Copy OpenMC libraries
 COPY --from=builder /openmc/build/lib /usr/local/lib
 ENV LD_LIBRARY_PATH=/usr/local/lib:${LD_LIBRARY_PATH}
 
-# Install NJOY binary
+# 3. Copy Python OpenMC package installed in builder
+COPY --from=builder /usr/local/lib/python3.11/site-packages/ /usr/local/lib/python3.11/site-packages/
+
+# Copy NJOY
 COPY --from=builder /NJOY2016/build/njoy /usr/local/bin/njoy
 ENV NJOY=/usr/local/bin/njoy
 
 ############################################
-# Copy repository content (Binder-safe)
+# Copy repository content
 ############################################
 WORKDIR /home/${NB_USER}
 COPY --chown=${NB_UID}:${NB_UID} . /home/${NB_USER}
@@ -103,6 +97,6 @@ COPY --chown=${NB_UID}:${NB_UID} . /home/${NB_USER}
 USER ${NB_USER}
 
 ############################################
-# Binder: Start JupyterLab
+# Launch Jupyter for Binder
 ############################################
 CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser"]
