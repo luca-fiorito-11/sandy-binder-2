@@ -60,6 +60,7 @@ RUN if id -u "${NB_USER}" >/dev/null 2>&1; then \
     mkdir -p "${HOME}" && chown -R "${NB_USER}:${NB_USER}" "${HOME}"
 
 USER ${NB_USER}
+# Switch to the non-root user
 WORKDIR ${HOME}
 
 # Copy NJOY binary from builder stage
@@ -67,7 +68,8 @@ COPY --from=builder /usr/local/bin/njoy /usr/local/bin/
 ENV NJOY=/usr/local/bin/njoy
 
 # Copy local repository files into Binder home
-COPY . ${HOME}
+COPY . /src
+RUN chown -R ${NB_UID}:${NB_UID} /src
 
-# Ensure permissions
-RUN chown -R ${NB_UID}:${NB_UID} ${HOME}
+USER ${NB_USER}
+WORKDIR /src
