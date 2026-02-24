@@ -42,8 +42,11 @@ FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Install HDF5 runtime so OpenMC can find libhdf5_serial.so.310
+# Install runtime libraries required by OpenMC + NJOY
 RUN apt-get update && apt-get install -y \
+    libgomp1 \
+    libquadmath0 \
+    libstdc++6 \
     libhdf5-serial-dev \
     && rm -rf /var/lib/apt/lists/*
 
