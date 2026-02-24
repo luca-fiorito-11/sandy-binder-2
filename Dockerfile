@@ -1,52 +1,62 @@
 ############################################
-# Stage 1 — Build NJOY
+# Stage 1 — Build NJOY + OpenMC
 ############################################
 FROM python:3.11-slim AS builder
 
-# System deps
 RUN apt-get update && apt-get install -y \
     build-essential \
     gfortran \
     cmake \
     git \
     curl \
+    hdf5-tools \
+    libhdf5-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Build NJOY2016
+# --- Build NJOY2016 ---
 RUN git clone --depth 1 https://github.com/njoy/NJOY2016.git \
  && cd NJOY2016 && mkdir build && cd build \
- && cmake -DPython3_EXECUTABLE=$(which python3) .. \
- && make -j$(nproc) && make install
+ && cmake -DCMAKE_BUILD_TYPE=Release .. \
+ && make -j$(nproc)
+
+# --- Build OpenMC (minimal, no MPI) ---
+RUN git clone --depth 1 https://github.com/openmc-dev/openmc.git \
+ && cd openmc \
+ && mkdir build && cd build \
+ && cmake -DCMAKE_BUILD_TYPE=Release \
+          -DOPENMC_ENABLE_MPI=OFF \
+          -DOPENMC_USE_OPENMP=ON \
+          -DOPENMC_USE_DEFAULT_PATHS=ON \
+          .. \
+ && make -j$(nproc)
 
 
 ############################################
-# Stage 2 — Final Binder image
+# Stage 2 — Runtime (Binder)
 ############################################
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Install Python packages
+# Install Python dependencies (minimal)
 RUN pip install --no-cache --upgrade pip && \
     pip install --no-cache \
         notebook \
         jupyterlab \
-        matplotlib \
-        seaborn \
-        scikit-learn \
+        sandy \
         serpentTools \
-        sandy
+        seaborn \
+        matplotlib \
+        scikit-learn \
+        openmc
 
-############################################
-# Create user (Binder-safe)
-############################################
+# Create user
 ARG NB_USER=jovyan
 ARG NB_UID=1000
 ENV USER=${NB_USER}
 ENV HOME=/home/${NB_USER}
 
-# Idempotent user creation (works on Binder & local Docker)
 RUN if id -u "${NB_USER}" >/dev/null 2>&1; then \
         echo "User exists"; \
     else \
@@ -59,22 +69,25 @@ RUN if id -u "${NB_USER}" >/dev/null 2>&1; then \
     mkdir -p "${HOME}"
 
 ############################################
-# Copy NJOY from builder
+# Copy binaries from builder
 ############################################
-COPY --from=builder /usr/local/bin/njoy /usr/local/bin/
+# OpenMC executable
+COPY --from=builder /openmc/build/bin/openmc /usr/local/bin/openmc
+ENV OPENMC_CROSS_SECTIONS=""  # user will set or provide data
+
+# NJOY
+COPY --from=builder /NJOY2016/build/njoy /usr/local/bin/njoy
 ENV NJOY=/usr/local/bin/njoy
 
 ############################################
-# Copy project (BINDER-SAFE)
+# Copy repo content
 ############################################
 WORKDIR /home/${NB_USER}
-
-# Copy files without .git (requires .dockerignore)
 COPY --chown=${NB_UID}:${NB_UID} . /home/${NB_USER}
 
 USER ${NB_USER}
 
 ############################################
-# CMD — CRITICAL FOR BINDER
+# Binder entrypoint
 ############################################
 CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser"]
