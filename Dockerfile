@@ -67,9 +67,12 @@ WORKDIR ${HOME}
 COPY --from=builder /usr/local/bin/njoy /usr/local/bin/
 ENV NJOY=/usr/local/bin/njoy
 
-# Copy local repository files into Binder home
-COPY . /src
-RUN chown -R ${NB_UID}:${NB_UID} /src
+# We stay as root here
+WORKDIR /src
 
+# Copy only the build context (now without .git) and set ownership at copy time
+COPY --chown=${NB_UID}:${NB_UID} . /src
+
+# Now switch to the notebook user
 USER ${NB_USER}
 WORKDIR /src
