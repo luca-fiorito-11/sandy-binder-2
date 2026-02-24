@@ -1,18 +1,16 @@
-# Exclude VCS metadata and CI configs
 .git
-.gitmodules
-.github
-.gitlab
-.gitattributes
 .gitignore
+.gitattributes
+.github
 
-# Exclude local virtual envs and caches
-.venv
 __pycache__
 *.pyc
+*.pyo
+*.pyd
+*.so
 
-# Exclude things that shouldn’t end up in the image
-Dockerfile
-binder/
 .env
 *.ipynb_checkpoints
+
+# Do NOT include your Binder Dockerfile in the root twice
+Dockerfile
