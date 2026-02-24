@@ -38,21 +38,29 @@ RUN pip install --no-cache --upgrade pip && \
         sandy
 
 # Add JEFF-4.0 data
-RUN git clone git@git.oecd-nea.org:stainer_t/jeffy.git
+RUN git clone https://git.oecd-nea.org/stainer_t/jeffy.git
 
 # Create user for Binder
-ARG NB_USER
-ARG NB_UID
-ENV USER ${NB_USER}
-ENV HOME /home/${NB_USER}
+ARG NB_USER=jovyan
+ARG NB_UID=1000
+ENV USER=${NB_USER}
+ENV HOME=/home/${NB_USER}
 
-RUN adduser --disabled-password \
-    --gecos "Default user" \
-    --uid ${NB_UID} \
-    ${NB_USER}
+# Safe user creation: won’t fail if user or UID already exists
+RUN if id -u "${NB_USER}" >/dev/null 2>&1; then \
+        echo "User ${NB_USER} already exists"; \
+    else \
+        if getent passwd "${NB_UID}" >/dev/null 2>&1; then \
+            echo "UID ${NB_UID} already exists, creating ${NB_USER} with automatic UID"; \
+            adduser --disabled-password --gecos "Default user" "${NB_USER}"; \
+        else \
+            adduser --disabled-password --gecos "Default user" --uid "${NB_UID}" "${NB_USER}"; \
+        fi; \
+    fi && \
+    mkdir -p "${HOME}" && chown -R "${NB_USER}:${NB_USER}" "${HOME}"
 
+USER ${NB_USER}
 WORKDIR ${HOME}
-USER ${USER}
 
 # Copy NJOY binary from builder stage
 COPY --from=builder /usr/local/bin/njoy /usr/local/bin/
