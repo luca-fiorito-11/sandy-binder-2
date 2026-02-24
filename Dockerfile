@@ -37,9 +37,12 @@ RUN pip install --no-cache --upgrade pip && \
         serpentTools \
         sandy
 
+# Add JEFF-4.0 data
+RUN git clone git@git.oecd-nea.org:stainer_t/jeffy.git
+
 # Create user for Binder
-ARG NB_USER=jovyan
-ARG NB_UID=1000
+ARG NB_USER
+ARG NB_UID
 ENV USER ${NB_USER}
 ENV HOME /home/${NB_USER}
 
