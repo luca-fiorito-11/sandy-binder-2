@@ -42,6 +42,11 @@ FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
+# Install HDF5 runtime so OpenMC can find libhdf5_serial.so.310
+RUN apt-get update && apt-get install -y \
+    libhdf5-serial-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN pip install --no-cache --upgrade pip && \
     pip install --no-cache \
         notebook \
