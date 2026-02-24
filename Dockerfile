@@ -82,18 +82,19 @@ RUN if id -u "${NB_USER}" >/dev/null 2>&1; then \
 # Copy OpenMC runtime components
 ############################################
 
-# 1. Copy OpenMC binary
+# 1. Copy OpenMC binary + shared libs
 COPY --from=builder /openmc/build/bin/openmc /usr/local/bin/openmc
-
-# 2. Copy OpenMC libraries
 COPY --from=builder /openmc/build/lib /usr/local/lib
+
+# 2. Runtime linker search path
 ENV LD_LIBRARY_PATH=/usr/local/lib:${LD_LIBRARY_PATH}
 
 # 3. Copy Python OpenMC package installed in builder
 COPY --from=builder /usr/local/lib/python3.11/site-packages/ /usr/local/lib/python3.11/site-packages/
 
-# Copy NJOY
+# 4. Copy NJOY
 COPY --from=builder /NJOY2016/build/njoy /usr/local/bin/njoy
+COPY --from=builder /NJOY2016/build/libnjoy.so /usr/local/lib/
 ENV NJOY=/usr/local/bin/njoy
 
 ############################################
