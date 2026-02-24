@@ -73,7 +73,7 @@ RUN if id -u "${NB_USER}" >/dev/null 2>&1; then \
 ############################################
 # OpenMC executable
 COPY --from=builder /openmc/build/bin/openmc /usr/local/bin/openmc
-ENV OPENMC_CROSS_SECTIONS=""  # user will set or provide data
+# ENV OPENMC_CROSS_SECTIONS=""  # user will set or provide data
 
 # NJOY
 COPY --from=builder /NJOY2016/build/njoy /usr/local/bin/njoy
